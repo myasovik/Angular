@@ -1,0 +1,279 @@
+@using DCS_MVC_ABSOLUTELY.Models.ProjectStatusReport;
+@{
+    ViewBag.Title = "ProjectStatusReport";
+    Layout = "~/Views/ProjectMaintenance/_LayoutDetails.cshtml";
+}
+
+<script type="text/javascript">
+    function getRoutsWebpage() {
+        return "@Request.Url.ToString().Replace(@Request.RawUrl, "")" +"/DCS_MVC_ABSOLUTELY";
+        //return "@ViewBag.routes.getWebPage()";
+    }
+    function getIndex() {
+        return "@ViewBag.index";
+    }
+</script>
+<script src="~/Scripts/ProjectStatusReport/ProjectStatusReportAngular.js"></script>
+<style>
+.verticalCenter {
+  position: relative;
+  transform: translateY(50%);  
+}
+.textAlignRight{
+    text-align:right;
+}
+.margingBottom{
+    margin-bottom:10px;
+}
+</style>
+<div class="container-fluid" id="superSwitch" ng-app="ProjectStatusReport" ng-controller="AppController">
+    <br />
+    <h4>{{client[0].ClientName}} / {{client[0].ProjectName}} ({{status[0].ProjectID}})</h4>
+    <h4>Period Type</h4>
+    <div class="panel panel-default">
+        <div class="panel-heading" style="padding:5px 5px 5px 5px">
+            <a href="#status" data-toggle="collapse" data-parent="#superSwitch" style="margin-right:10px;">
+                <span class="glyphicon glyphicon-folder-open"></span> Status
+            </a>
+        </div>
+        <div id="status" class="panel-collapse collapse">
+            <table class=" table table-striped">
+                <thead>
+                    <tr>
+                        <th>Reporting Period</th>
+                        <th>Schedule Concerns</th>
+                        <th>Issues/Risk Concerns</th>
+                        <th>Pricing Concerns</th>
+                        <th>Overall Project Status Concerns</th>
+                        <th>Status Summary</th>
+                        <th>For Deletion</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr ng-repeat="record in status" ng-click="setActiveRow(record.StatusID); superValidate();" ng-class="record.ngActive">
+                        <td>{{convertDateToLocal(record.ReportingPeriod)}}</td>
+                        <td ng-class="colorStatusDesc(record.StatusID,0)">{{record.ScheduleDescription}}</td>
+                        <td ng-class="colorStatusDesc(record.StatusID,1)">{{record.RiskDescription}}</td>
+                        <td ng-class="colorStatusDesc(record.StatusID,2)">{{record.PricingStatusDescription}}</td>
+                        <td ng-class="colorStatusDesc(record.StatusID,3)">{{record.OverallProjectStatusDescription}}</td>
+                        <td>{{record.StatusSummary}}</td>
+                        <td ng-click="removeRecord(record.StatusID)">{{displayDeleteFlag(record.deleteFlag)}}</td>
+                    </tr>
+                </tbody>
+            </table><br />
+            <div class="container" style="background-color:lightgray;padding: 10px 10px 10px 10px">
+                <div class="row margingBottom">
+                    <div class="col-lg-2 textAlignRight">
+                        <label class="control-label verticalCenter">Reporting Period:</label>
+                    </div>
+                    <div class="col-lg-3">
+                        <div class="input-group" ng-class="insertValidate.inputs[2]">
+                            <input id="reportingperiod" name="ReportingPeriod" type="date" ng-model="status[activeRow].ReportingPeriod" class="form-control" datepicker-popup="{{format}}" is-open="opened" min-date="" max-date="" datepicker-options="dateOptions" date-disabled="disabled(date, mode)" close-text="Close"
+                                   ng-change="validate(InsertProjectStatus.ReportingPeriod.$error.date || InsertProjectStatus.ReportingPeriod.$error.required,2,insertValidate)" placeholder="MM-DD-YYYY" required />
+                            <span class="input-group-btn">
+                                <button type="button" class="btn btn-default" ng-click="open($event)"><i class="glyphicon glyphicon-calendar"></i></button>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-lg-7"></div>
+                </div>
+                <div class="row">
+                    <div class="col-lg-2 textAlignRight">
+                        <label class="control-label verticalCenter">Schedule Status:</label>
+                    </div>
+                    <div class="col-lg-3">
+                        <div class="form-group">
+                            <div ng-class="insertValidate.inputs[3]">
+                                <select id="schedulestatus" name="ScheduleStatus" class="form-control" ng-model="status[activeRow].ScheduleStatus"
+                                        ng-change="
+                                            addNewStatus();
+                                            validate(insertRow.ScheduleStatus!='PSR1ONTIME',4,insertValidate);
+                                            validate(InsertProjectStatus.ScheduleStatus.$error.required,3,insertValidate);" required>
+                                    <option value="">Select</option>
+                                    @{
+                                        foreach (db_p_LookupCode lc in @ViewBag.lookups.status)
+                                        {
+                                            <text>
+                                                <option value="@lc.CodeID">@lc.CodeDescription</option></text>
+                                        }
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-1"></div>
+                    <div class="col-lg-2 textAlignRight">
+                        <label class="control-label verticalCenter">Schedule Description:</label>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="form-group">
+                            <div ng-class="insertValidate.inputs[4]">
+                                <textarea name="ScheduleDescription" class="form-control" rows="1" ng-model="status[activeRow].ScheduleDescription" ng-change="addNewStatus();"></textarea>
+                                @*<input name="ScheduleDescription" class="form-control" type="text" value="" ng-model="status[activeRow].ScheduleDescription"
+    ng-change="addNewStatus();validate(InsertProjectStatus.ScheduleDescription.$error.required && insertRow.ScheduleStatus!='PSR1ONTIME' ,4,insertValidate)" required>*@
+                            </div>
+                        </div>
+                    </div>                    
+                </div>
+                <div class="row">
+                    <div class="col-lg-2 textAlignRight">
+                        <label class="control-label verticalCenter">Issues/Risk Status:</label>
+                    </div>
+                    <div class="col-lg-3">
+                        <div class="form-group">
+                            <div ng-class="insertValidate.inputs[5]">
+                                <select name="RiskStatus" class="form-control" ng-model="status[activeRow].RiskStatus" ng-change="addNewStatus();validate(insertRow.RiskStatus!='PSR1ONTIME',6,insertValidate);
+                                        validate(InsertProjectStatus.RiskStatus.$error.required,5,insertValidate);" required>
+                                    <option value="">Select</option>
+                                    @{
+                                        foreach (db_p_LookupCode lc in @ViewBag.lookups.status)
+                                        {
+                                            <text>
+                                                <option value="@lc.CodeID">@lc.CodeDescription</option></text>
+                                        }
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-3 textAlignRight">
+                        <label class="control-label verticalCenter">Issues/Risk Description:</label>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="form-group">
+                            <div ng-class="insertValidate.inputs[6]">
+                                <textarea name="RiskDescription" class="form-control" rows="1" ng-model="status[activeRow].RiskDescription" ng-change="addNewStatus();"></textarea>
+                                @*<input name="RiskDescription" class="form-control" type="text" value="" ng-model="status[activeRow].RiskDescription"
+    ng-change="addNewStatus();validate(InsertProjectStatus.RiskDescription.$error.required && insertRow.RiskStatus!='PSR1ONTIME' ,6,insertValidate)" required>*@
+                            </div>
+                        </div>
+                    </div>                    
+                </div>
+                <div class="row">
+                    <div class="col-lg-2 textAlignRight">
+                        <label class="control-label verticalCenter">Pricing Status:</label>
+                    </div>
+                    <div class="col-lg-3">
+                        <div class="form-group">
+                            <div ng-class="insertValidate.inputs[7]">
+                                <select name="PricingStatus" class="form-control" ng-model="status[activeRow].PricingStatus" ng-change="addNewStatus();validate(insertRow.PricingStatus!='PSR1ONTIME',8,insertValidate);
+                                    validate(InsertProjectStatus.PricingStatus.$error.required,7,insertValidate);" required>
+                                    <option value="">Select</option>
+                                    @{
+                                        foreach (db_p_LookupCode lc in @ViewBag.lookups.status)
+                                        {
+                                            <text>
+                                                <option value="@lc.CodeID">@lc.CodeDescription</option></text>
+                                        }
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                    </div>                    
+                    <div class="col-lg-3 textAlignRight">
+                        <label class="control-label verticalCenter">Pricing Status Description:</label>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="form-group">
+                            <div ng-class="insertValidate.inputs[8]">
+                                <textarea name="PricingStatusDescription" class="form-control" rows="1" ng-model="status[activeRow].PricingStatusDescription" ng-change="addNewStatus();"></textarea>
+                                @*<input name="PricingStatusDescription" class="form-control" type="text" value="" ng-model="status[activeRow].PricingStatusDescription"
+    ng-change="addNewStatus();validate(InsertProjectStatus.PricingStatusDescription.$error.required && insertRow.PricingStatus!='PSR1ONTIME',8,insertValidate)" required>*@
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-lg-2 textAlignRight">
+                        <label class="control-label verticalCenter">Overall Project Status:</label>
+                    </div>
+                    <div class="col-lg-3">
+                        <div class="form-group">
+                            <div ng-class="insertValidate.inputs[9]">
+                                <select name="OverallProjectStatus" class="form-control" ng-model="status[activeRow].OverallProjectStatus" ng-change="addNewStatus();validate(insertRow.OverallProjectStatus!='PSR1ONTIME',10,insertValidate);
+                                    validate(InsertProjectStatus.OverallProjectStatus.$error.required,9,insertValidate);" required>
+                                    <option value="">Select</option>
+                                    @{
+                                        foreach (db_p_LookupCode lc in @ViewBag.lookups.status)
+                                        {
+                                            <text>
+                                                <option value="@lc.CodeID">@lc.CodeDescription</option></text>
+                                        }
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 textAlignRight">
+                        <label class="control-label verticalCenter">Overall Project Status Description:</label>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="form-group">
+                            <div ng-class="insertValidate.inputs[10]">
+                                <textarea name="OverallProjectStatusDescription" class="form-control" rows="1" ng-model="status[activeRow].OverallProjectStatusDescription" ng-change="addNewStatus();"></textarea>
+                                @*<input name="OverallProjectStatusDescription" class="form-control" type="text" value="" ng-model="status[activeRow].OverallProjectStatusDescription"
+    ng-change="addNewStatus();validate(InsertProjectStatus.OverallProjectStatusDescription.$error.required && insertRow.OverallProjectStatus!='PSR1ONTIME',10,insertValidate)" required>*@
+                            </div>
+                        </div>
+                    </div>    
+                </div>
+                <div class="row">
+                    <div class="col-lg-12">
+                        <label class="control-label">Status Summary:</label>
+                        <textarea name="StatusSummary" placeholder="" class="form-control" rows="5" ng-model="status[activeRow].StatusSummary" ng-change="addNewStatus();"></textarea>
+                    </div>                    
+                </div>
+            </div>
+            
+            @*
+                <div class="form-group" ng-hide="true">
+                    <label class="col-sm-2 control-label">Created User ID</label>
+                    <div class="col-sm-10">
+                        <input name="CreatedUserID" class="form-control" type="text" value="" ng-model="loginID" readonly>
+                    </div>
+                </div>
+                <div class="form-group" ng-hide="true">
+                    <label class="col-sm-2 control-label">Created Date</label>
+                    <div class="col-sm-10">
+                        <input name="CreatedDate" class="form-control" type="text" value="" ng-model="clock" readonly>
+                    </div>
+                </div>
+                <div class="form-group" ng-hide="true">
+                    <label class="col-sm-2 control-label">Updated User ID</label>
+                    <div class="col-sm-10">
+                        <input name="UpdatedUserID" class="form-control" type="text" value="" ng-model="loginID" readonly>
+                    </div>
+                </div>
+                <div class="form-group" ng-hide="true">
+                    <label class="col-sm-2 control-label">Updated Date</label>
+                    <div class="col-sm-10">
+                        <input name="UpdatedDate" class="form-control" type="text" value="" ng-model="clock" readonly>
+                    </div>
+                </div>
+            *@
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading" style="padding:5px 5px 5px 5px">
+            <a href="#milestone" data-toggle="collapse" data-parent="#superSwitch" style="margin-right:10px;">
+                <span class="glyphicon glyphicon-folder-open"></span> Project Set-up Tasks/Milestones
+            </a>
+        </div>
+        <div id="milestone" class="panel-collapse collapse">
+            asdfasdf
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading" style="padding:5px 5px 5px 5px">
+            <a href="#revenue" data-toggle="collapse" data-parent="#superSwitch" style="margin-right:10px;">
+                <span class="glyphicon glyphicon-folder-open"></span> Revenue
+            </a>
+        </div>
+        <div id="revenue" class="panel-collapse collapse">
+            asdfasdf
+        </div>
+    </div>
+    
+    <button type="button" class="btn btn-primary" style="float:right">Submit All Changes</button>
+</div>
